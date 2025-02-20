@@ -28,7 +28,7 @@
             initConnection() {
                 const title = document.getElementById('title')
                 // 优先使用 SharedWorker
-                if (typeof SharedWorker == 'undefined') {
+                if (window.SharedWorker) {
                     this.initSharedWorker();
                     title.textContent = '使用的是SharedWorker';
                 } else {
