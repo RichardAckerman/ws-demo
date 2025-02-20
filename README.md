@@ -12,6 +12,10 @@
 - 自动重连机制
 - 统一配置管理
 
+## 相关文档
+
+- [Socket.IO 客户端 API 文档](https://socket.io/zh-CN/docs/v4/client-api/)
+
 ## 项目结构
 
 ```
