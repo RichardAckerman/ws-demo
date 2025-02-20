@@ -1,17 +1,18 @@
-const localServer = {
-    host: 'localhost',
-    serverPort: 9556,
-    webPort: 3000
-}
-
-const sshServer = {
-    host: '10.0.5.8',
-    serverPort: 9557,
-    webPort: 3000
-}
-
 // 更改服务器
-const serverConfig = sshServer;
+const serverConfig = {
+    localServer: {
+        host: 'localhost',
+        serverPort: 9556,
+        webPort: 3000
+    },
+    sshServer: {
+        host: '10.0.5.8',
+        serverPort: 9557,
+        webPort: 3000
+    }
+};
+
+const activeServer = serverConfig.localServer;
 
 const htmlPage = {
     wsPure: 'ws-pure.html',
@@ -20,15 +21,15 @@ const htmlPage = {
 
 export const config = {
     server: {
-        host: serverConfig.host,
-        port: serverConfig.serverPort,
+        host: activeServer.host,
+        port: activeServer.serverPort,
         wsUrl: function() {
             return `http://${this.host}:${this.port}`;
         }
     },
     webServer: {
-        host: serverConfig.host,
-        port: serverConfig.webPort,
+        host: activeServer.host,
+        port: activeServer.webPort,
         url: function() {
             return `http://${this.host}:${this.port}`;
         },
