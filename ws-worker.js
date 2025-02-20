@@ -4,9 +4,22 @@ let socket = null;
 let isConnecting = false;
 let cleanupInterval = null;
 
+const serverConfig = {
+    localServer: {
+        host: 'localhost',
+        serverPort: 9556,
+    },
+    sshServer: {
+        host: '10.0.5.8',
+        serverPort: 9557,
+    }
+};
+
+const activeServer = serverConfig.sshServer;
+
 // Socket 配置
 const SOCKET_CONFIG = {
-    url: 'http://localhost:9556',
+    url: `http://${activeServer.host}:${activeServer.serverPort}`,
     options: {
         transports: ['websocket'],
         reconnection: true,

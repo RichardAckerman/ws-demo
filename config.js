@@ -12,7 +12,7 @@ const serverConfig = {
     }
 };
 
-const activeServer = serverConfig.localServer;
+const activeServer = serverConfig.sshServer;
 
 const htmlPage = {
     wsPure: 'ws-pure.html',

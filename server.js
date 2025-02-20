@@ -43,6 +43,22 @@ io.on('connection', (socket) => {
         socket.emit('server_data', `服务端已收到数据: ${time} --- ${data}`);
     });
 
+    // 处理私聊消息
+    socket.on('private_message', (data) => {
+        const time = new Date().toLocaleString();
+        console.log('收到私聊消息：', data);
+        // 只发送给发送者
+        socket.emit('private_message', `${time} --- 来自客户端(${socket.id}): ${data}`);
+    });
+
+    // 处理广播消息
+    socket.on('broadcast_message', (data) => {
+        const time = new Date().toLocaleString();
+        console.log('收到广播消息：', data);
+        // 广播给所有客户端
+        io.emit('broadcast_message', `${time} --- 来自客户端(${socket.id}): ${data}`);
+    });
+
     socket.on('disconnect', () => {
         console.log('客户端断开连接，ID:', socket.id);
         console.log('当前连接数:', io.sockets.sockets.size);

@@ -12,7 +12,8 @@
     <ul id="messages"></ul>
     <form id="form">
         <input id="input" autocomplete="off" />
-        <button>发送</button>
+        <button type="button" id="privateBtn">触发私聊消息</button>
+        <button type="button" id="broadcastBtn">触发广播消息</button>
     </form>
 
     <script type="module">
@@ -46,23 +47,89 @@
 
             const form = document.getElementById('form');
             const input = document.getElementById('input');
+            const privateBtn = document.getElementById('privateBtn');
+            const broadcastBtn = document.getElementById('broadcastBtn');
 
             function addMessage(data) {
                 const messages = document.getElementById('messages');
                 const li = document.createElement('li');
                 li.textContent = data;
+                // 添加自动滚动
+                li.style.marginBottom = '10px';
                 messages.appendChild(li);
+                messages.scrollTop = messages.scrollHeight;
             }
-            // 发送消息
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
+
+            // 监听私聊消息
+            socket.on("private_message", function(data) {
+                console.log("收到私聊消息：", data);
+                addMessage(`[私聊] ${data}`);
+            });
+
+            // 监听广播消息
+            socket.on("broadcast_message", function(data) {
+                console.log("收到广播消息：", data);
+                addMessage(`[广播] ${data}`);
+            });
+
+            // 移除原有的form提交事件
+            form.onsubmit = (e) => e.preventDefault();
+
+            // 私聊消息按钮点击事件
+            privateBtn.addEventListener('click', () => {
                 if (input.value) {
-                    socket.emit("client_data", input.value);
+                    socket.emit("private_message", input.value);
+                    input.value = '';
+                }
+            });
+
+            // 广播消息按钮点击事件
+            broadcastBtn.addEventListener('click', () => {
+                if (input.value) {
+                    socket.emit("broadcast_message", input.value);
                     input.value = '';
                 }
             });
         });
     </script>
+
+    <style>
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        #form {
+            display: flex;
+            gap: 10px;
+        }
+
+        #input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </body>
 
 </html>
