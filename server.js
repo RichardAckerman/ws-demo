@@ -55,6 +55,10 @@ io.on('connection', (socket) => {
     socket.on('broadcast_message', (data) => {
         const time = new Date().toLocaleString();
         console.log('收到广播消息：', data);
+        io.emit('message', {
+            eventType: 'server_data',
+            data: `${time} --- 来自客户端(${socket.id}): ${data}`
+        });
         // 广播给所有客户端
         io.emit('broadcast_message', `${time} --- 来自客户端(${socket.id}): ${data}`);
     });
