@@ -1,15 +1,17 @@
 const localServer = {
     host: 'localhost',
-    port: 9556
+    serverPort: 9556,
+    webPort: 3000
 }
 
 const sshServer = {
     host: '10.0.5.8',
-    port: 9557
+    serverPort: 9557,
+    webPort: 3000
 }
 
 // 更改服务器
-const serverConfig = localServer;
+const serverConfig = sshServer;
 
 const htmlPage = {
     wsPure: 'ws-pure.html',
@@ -19,17 +21,17 @@ const htmlPage = {
 export const config = {
     server: {
         host: serverConfig.host,
-        port: serverConfig.port,
+        port: serverConfig.serverPort,
         wsUrl: function() {
             return `http://${this.host}:${this.port}`;
         }
     },
     webServer: {
         host: serverConfig.host,
-        port: serverConfig.port,
+        port: serverConfig.webPort,
         url: function() {
             return `http://${this.host}:${this.port}`;
         },
-        html: htmlPage.wsSharedworker // 默认使用SharedWorker
+        html: htmlPage.wsPure
     }
 };
