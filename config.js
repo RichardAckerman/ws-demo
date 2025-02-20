@@ -1,5 +1,15 @@
-const localIP = 'localhost';
-// const localIP = '10.0.5.8';
+const localServer = {
+    host: 'localhost',
+    port: 9556
+}
+
+const sshServer = {
+    host: '10.0.5.8',
+    port: 9557
+}
+
+// 更改服务器
+const serverConfig = localServer;
 
 const htmlPage = {
     wsPure: 'ws-pure.html',
@@ -8,18 +18,18 @@ const htmlPage = {
 
 export const config = {
     server: {
-        host: localIP,  // 使用本机IP
-        port: 9556,
+        host: serverConfig.host,
+        port: serverConfig.port,
         wsUrl: function() {
             return `http://${this.host}:${this.port}`;
         }
     },
     webServer: {
-        host: localIP,  // 使用本机IP
-        port: 3000,
+        host: serverConfig.host,
+        port: serverConfig.port,
         url: function() {
             return `http://${this.host}:${this.port}`;
         },
-        html: htmlPage.wsSharedworker
+        html: htmlPage.wsSharedworker // 默认使用SharedWorker
     }
 };
