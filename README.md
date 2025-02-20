@@ -34,7 +34,9 @@
 - 静态文件服务器：
   - 主机：localhost
   - 端口：3000
-  - 默认页面：可在配置中指定 ws-pure.html 或 ws-sharedworker.html
+  - 入口页面：通过 `webServer.html` 配置
+    - `htmlPage.wsPure`：纯 WebSocket 方案
+    - `htmlPage.wsSharedworker`：SharedWorker 方案
 
 ### SharedWorker 配置
 在 `ws-worker.js` 中，WebSocket 服务器地址被硬编码为：
@@ -71,13 +73,18 @@ node html.js
 
 启动服务后，可以通过以下方式访问演示页面：
 
-1. 纯 WebSocket 方案：
-   - 自动打开：运行 `node html.js` 后会自动在浏览器中打开
+1. 通过静态文件服务器访问：
+   - 运行 `node html.js` 后会自动在浏览器中打开
+   - 默认页面可在 `config.js` 中配置：
+     ```javascript
+     webServer: {
+         // ...
+         html: htmlPage.wsPure  // 使用纯 WebSocket 方案
+         // 或
+         html: htmlPage.wsSharedworker  // 使用 SharedWorker 方案
+     }
+     ```
    - 手动访问：`http://localhost:3000`
-
-2. SharedWorker 方案：
-   - 直接在浏览器中打开 `ws-sharedworker.html` 文件
-   - 或使用 live-server：`live-server ws-sharedworker.html`
 
 ## 调试指南
 
