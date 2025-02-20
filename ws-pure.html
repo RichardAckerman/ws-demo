@@ -8,16 +8,18 @@
 </head>
 
 <body>
-    <h1>ws-ok</h1>
+    <h1>ws-pure</h1>
     <ul id="messages"></ul>
     <form id="form">
         <input id="input" autocomplete="off" />
         <button>发送</button>
     </form>
 
-    <script>
+    <script type="module">
+        import { config } from './config.js';
+
         window.addEventListener('load', () => {
-            const socket = io(`http://localhost:9556`, {
+            const socket = io(config.server.wsUrl(), {
                 transports: ['websocket'],
                 reconnection: true,
                 reconnectionAttempts: 5,

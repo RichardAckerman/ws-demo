@@ -7,7 +7,7 @@
 </head>
 
 <body>
-    <h1>ws-调试</h1>
+    <h1>ws-SharedWorker</h1>
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
     <ul id="messages"></ul>
     <form id="form">
@@ -15,7 +15,9 @@
         <button>发送</button>
     </form>
 
-    <script>
+    <script type="module">
+        import { config } from './config.js';
+
         class WebSocketManager {
             constructor() {
                 this.initConnection();
@@ -81,7 +83,7 @@
                 const tabId = Date.now().toString();
                 localStorage.setItem('activeTab', tabId);
 
-                const socket = io('http://localhost:9556', {
+                const socket = io(config.server.wsUrl(), {
                     transports: ['websocket'],
                     reconnection: true,
                     reconnectionAttempts: 5,

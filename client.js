@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
+import { config } from './config.js';
 
-const socket = io('http://localhost:9556', {
+const socket = io(config.server.wsUrl(), {
     transports: ['websocket'],  // 只使用 websocket
     reconnection: true,
     reconnectionAttempts: 5,

@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { config } from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,13 +24,11 @@ const io = new Server(http, {
     pingInterval: 25000
 });
 
-const host = 'localhost', port = 9556;
-
 app.use('/ws', express.static(path.join(__dirname)));
 app.use(express.static('public'));
 
-http.listen(port, () => {
-    console.log(`服务器运行在 ws://${host}:${port}`);
+http.listen(config.server.port, () => {
+    console.log(`服务器运行在 ws://${config.server.host}:${config.server.port}`);
 });
 
 io.on('connection', (socket) => {
