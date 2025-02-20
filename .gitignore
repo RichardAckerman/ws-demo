@@ -1,0 +1,28 @@
+node_modules
+.DS_Store
+dist-*
+dist
+lib
+*.log
+*.local
+.history
+scripts/mkcert/cert
+
+.idea
+dev-config.json
+chineseTextData.txt
+untranslated_texts_report.json
+
+# TODO plugin
+TODO
+
+common_qiankun
+.cache
+.cache
+# VS Code Counter extension result
+.VSCodeCounter
+.eslintcache
+
+apifox.config.json
+
+packages/proxy/public

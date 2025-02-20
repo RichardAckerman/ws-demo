@@ -1,0 +1,160 @@
+<!-- SharedWorker 方案 -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Socket.IO 聊天室</title>
+</head>
+
+<body>
+    <h1>ws-调试</h1>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
+    <ul id="messages"></ul>
+    <form id="form">
+        <input id="input" autocomplete="off" />
+        <button>发送</button>
+    </form>
+
+    <script>
+        class WebSocketManager {
+            constructor() {
+                this.initConnection();
+            }
+
+            initConnection() {
+                // 优先使用 SharedWorker
+                if (typeof SharedWorker !== 'undefined') {
+                    this.initSharedWorker();
+                } else {
+                    this.initLocalStorage();
+                }
+            }
+
+            initSharedWorker() {
+                try {
+                    console.log('开始初始化 SharedWorker');
+                    const worker = new SharedWorker('./ws-worker.js');
+                    worker.port.start();
+
+                    worker.onerror = (error) => {
+                        console.error('Worker 错误:', error);
+                        // 发生错误时切换到 localStorage 方案
+                        this.initLocalStorage();
+                    };
+
+                    worker.port.onmessage = (e) => {
+                        console.log('收到 Worker 消息:', e.data);
+                        const { type, data } = e.data;
+                        switch (type) {
+                            case 'connect':
+                                console.log("已连接到服务器，ID:", data);
+                                addMessage(`已连接到服务器，ID: ${data}`);
+                                break;
+                            case 'server_data':
+                                console.log("服务端发来的消息--：", data);
+                                addMessage(data);
+                                break;
+                            case 'connect_error':
+                                console.log("connect_error", data);
+                                addMessage(`连接错误: ${data}`);
+                                break;
+                            case 'disconnect':
+                                console.log("与服务器断开连接");
+                                addMessage("与服务器断开连接");
+                                break;
+                        }
+                    };
+
+                    this.sendMessage = (message) => {
+                        console.log('发送消息到 Worker:', message);
+                        worker.port.postMessage({ type: 'send', data: message });
+                    };
+                } catch (error) {
+                    console.error('SharedWorker 初始化失败:', error);
+                    // 发生错误时切换到 localStorage 方案
+                    this.initLocalStorage();
+                }
+            }
+
+            initLocalStorage() {
+                // 使用 localStorage 方案
+                const tabId = Date.now().toString();
+                localStorage.setItem('activeTab', tabId);
+
+                const socket = io('http://localhost:9556', {
+                    transports: ['websocket'],
+                    reconnection: true,
+                    reconnectionAttempts: 5,
+                    reconnectionDelay: 1000
+                });
+
+                socket.on("connect", () => {
+                    console.log("已连接到服务器，ID:", socket.id);
+                    addMessage(`已连接到服务器，ID: ${socket.id}`);
+                });
+
+                socket.on("server_data", (data) => {
+                    console.log("服务端发来的消息--：", data);
+                    addMessage(`服务端发来的消息--: ${data}`);
+                    // 广播消息给其他标签页
+                    localStorage.setItem('wsMessage', JSON.stringify({
+                        time: Date.now(),
+                        data: data
+                    }));
+                });
+
+                socket.on("connect_error", (res) => {
+                    console.log("connect_error", res);
+                });
+
+                socket.on("disconnect", () => {
+                    console.log("与服务器断开连接");
+                });
+
+                // 监听其他标签页的消息
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'wsMessage') {
+                        const message = JSON.parse(e.newValue);
+                        console.log("从其他标签页收到消息：", message.data);
+                        addMessage(`从其他标签页收到消息--: ${message.data}`);
+                    }
+                });
+
+                // 标签页关闭时清理
+                window.addEventListener('beforeunload', () => {
+                    if (localStorage.getItem('activeTab') === tabId) {
+                        localStorage.removeItem('activeTab');
+                    }
+                });
+
+                this.sendMessage = (message) => {
+                    socket.emit("client_data", message);
+                };
+            }
+        }
+
+        // 初始化 WebSocket 管理器
+        const wsManager = new WebSocketManager();
+
+        // 处理表单提交
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+
+        function addMessage(data) {
+            const messages = document.getElementById('messages');
+            const li = document.createElement('li');
+            li.textContent = data;
+            messages.appendChild(li);
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (input.value) {
+                wsManager.sendMessage(input.value);
+                input.value = '';
+            }
+        });
+    </script>
+</body>
+
+</html>

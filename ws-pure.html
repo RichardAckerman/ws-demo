@@ -1,0 +1,66 @@
+<!-- 纯websocket方案 -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Socket.IO 聊天室</title>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
+</head>
+
+<body>
+    <h1>ws-ok</h1>
+    <ul id="messages"></ul>
+    <form id="form">
+        <input id="input" autocomplete="off" />
+        <button>发送</button>
+    </form>
+
+    <script>
+        window.addEventListener('load', () => {
+            const socket = io(`http://localhost:9556`, {
+                transports: ['websocket'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000
+            });
+            // 接收消息
+            socket.on("connect", function open() {
+                console.log("已连接到服务器，ID:", socket.id);
+                socket.emit("client_data", `我是ws-ok.html!, id:${socket.id}`); // 向服务器发送消息
+            });
+
+            socket.on("server_data", function incoming(data) {
+                console.log("服务端发来的消息--：", data); // 打印从服务器接收到的消息
+                addMessage(data);
+            });
+
+            socket.on("connect_error", (res) => {
+                console.log("connect_error", res); // 打印从服务器接收到的消息
+            });
+
+            socket.on("disconnect", () => {
+                console.log("与服务器断开连接");
+            });
+
+            const form = document.getElementById('form');
+            const input = document.getElementById('input');
+
+            function addMessage(data) {
+                const messages = document.getElementById('messages');
+                const li = document.createElement('li');
+                li.textContent = data;
+                messages.appendChild(li);
+            }
+            // 发送消息
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (input.value) {
+                    socket.emit("client_data", input.value);
+                    input.value = '';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
