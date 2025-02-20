@@ -7,12 +7,14 @@
 </head>
 
 <body>
-    <h1>ws-SharedWorker</h1>
+    <h1 id="title"></h1>
+    <div>广播消息会向每一个连接的客户端发送。多个标签页是一个连接，私发和广播都会回显。</div>
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
     <ul id="messages"></ul>
     <form id="form">
         <input id="input" autocomplete="off" />
-        <button>发送</button>
+        <button type="button" id="privateBtn">触发私聊消息</button>
+        <button type="button" id="broadcastBtn">触发广播消息</button>
     </form>
 
     <script type="module">
@@ -24,11 +26,14 @@
             }
 
             initConnection() {
+                const title = document.getElementById('title')
                 // 优先使用 SharedWorker
-                if (typeof SharedWorker !== 'undefined') {
+                if (typeof SharedWorker == 'undefined') {
                     this.initSharedWorker();
+                    title.textContent = '使用的是SharedWorker';
                 } else {
                     this.initLocalStorage();
+                    title.textContent = '使用的是LocalStorage';
                 }
             }
 
@@ -40,7 +45,6 @@
 
                     worker.onerror = (error) => {
                         console.error('Worker 错误:', error);
-                        // 发生错误时切换到 localStorage 方案
                         this.initLocalStorage();
                     };
 
@@ -53,7 +57,9 @@
                                 addMessage(`已连接到服务器，ID: ${data}`);
                                 break;
                             case 'server_data':
-                                console.log("服务端发来的消息--：", data);
+                            case 'private_message':
+                            case 'broadcast_message':
+                                console.log(`收到${type}消息：`, data);
                                 addMessage(data);
                                 break;
                             case 'connect_error':
@@ -71,66 +77,167 @@
                         console.log('发送消息到 Worker:', message);
                         worker.port.postMessage({ type: 'send', data: message });
                     };
+
+                    this.sendPrivateMessage = (message) => {
+                        worker.port.postMessage({ type: 'private_message', data: message });
+                    };
+
+                    this.sendBroadcastMessage = (message) => {
+                        worker.port.postMessage({ type: 'broadcast_message', data: message });
+                    };
                 } catch (error) {
                     console.error('SharedWorker 初始化失败:', error);
-                    // 发生错误时切换到 localStorage 方案
                     this.initLocalStorage();
                 }
             }
 
             initLocalStorage() {
-                // 使用 localStorage 方案
                 const tabId = Date.now().toString();
-                localStorage.setItem('activeTab', tabId);
+                const MASTER_TAB_KEY = 'masterTab';
+                const SOCKET_MESSAGE_KEY = 'socketMessage';
+                const SOCKET_ACTION_KEY = 'socketAction';  // 新增：用于发送消息的key
 
-                const socket = io(config.server.wsUrl(), {
-                    transports: ['websocket'],
-                    reconnection: true,
-                    reconnectionAttempts: 5,
-                    reconnectionDelay: 1000
-                });
+                // 检查是否已经有主标签页
+                const isMasterTab = !localStorage.getItem(MASTER_TAB_KEY);
+                if (isMasterTab) {
+                    localStorage.setItem(MASTER_TAB_KEY, tabId);
+                }
 
-                socket.on("connect", () => {
-                    console.log("已连接到服务器，ID:", socket.id);
-                    addMessage(`已连接到服务器，ID: ${socket.id}`);
-                });
+                let socket = null;
 
-                socket.on("server_data", (data) => {
-                    console.log("服务端发来的消息--：", data);
-                    addMessage(`服务端发来的消息--: ${data}`);
-                    // 广播消息给其他标签页
-                    localStorage.setItem('wsMessage', JSON.stringify({
-                        time: Date.now(),
-                        data: data
-                    }));
-                });
+                // 只在主标签页中创建 WebSocket 连接
+                if (isMasterTab) {
+                    socket = io(config.server.wsUrl(), {
+                        transports: ['websocket'],
+                        reconnection: true,
+                        reconnectionAttempts: 5,
+                        reconnectionDelay: 1000
+                    });
 
-                socket.on("connect_error", (res) => {
-                    console.log("connect_error", res);
-                });
+                    socket.on("connect", () => {
+                        console.log("已连接到服务器，ID:", socket.id);
+                        // 广播连接状态给所有标签页
+                        localStorage.setItem(SOCKET_MESSAGE_KEY, JSON.stringify({
+                            type: 'connect',
+                            data: `已连接到服务器，ID: ${socket.id}`
+                        }));
+                        addMessage(`已连接到服务器，ID: ${socket.id}`);
+                    });
 
-                socket.on("disconnect", () => {
-                    console.log("与服务器断开连接");
-                });
+                    socket.on("server_data", (data) => {
+                        console.log("服务端发来的消息--：", data);
+                        localStorage.setItem(SOCKET_MESSAGE_KEY, JSON.stringify({
+                            type: 'server_data',
+                            data: data
+                        }));
+                        addMessage(data);
+                    });
 
-                // 监听其他标签页的消息
+                    socket.on("private_message", (data) => {
+                        console.log("收到私聊消息：", data);
+                        localStorage.setItem(SOCKET_MESSAGE_KEY, JSON.stringify({
+                            type: 'private_message',
+                            data: `[私聊] ${data}`
+                        }));
+                        addMessage(`[私聊] ${data}`);
+                    });
+
+                    socket.on("broadcast_message", (data) => {
+                        console.log("收到广播消息：", data);
+                        localStorage.setItem(SOCKET_MESSAGE_KEY, JSON.stringify({
+                            type: 'broadcast_message',
+                            data: `[广播] ${data}`
+                        }));
+                        addMessage(`[广播] ${data}`);
+                    });
+
+                    socket.on("connect_error", (error) => {
+                        console.log("connect_error", error);
+                        localStorage.setItem(SOCKET_MESSAGE_KEY, JSON.stringify({
+                            type: 'error',
+                            data: `连接错误: ${error}`
+                        }));
+                    });
+
+                    socket.on("disconnect", () => {
+                        console.log("与服务器断开连接");
+                        localStorage.setItem(SOCKET_MESSAGE_KEY, JSON.stringify({
+                            type: 'disconnect',
+                            data: "与服务器断开连接"
+                        }));
+                    });
+
+                    // 监听其他标签页的消息发送请求
+                    window.addEventListener('storage', (e) => {
+                        if (e.key === SOCKET_ACTION_KEY && e.newValue && socket) {
+                            const action = JSON.parse(e.newValue);
+                            console.log("主标签页收到发送请求：", action);
+                            socket.emit(action.type, action.data);
+                            // 清除action，避免重复处理
+                            localStorage.removeItem(SOCKET_ACTION_KEY);
+                        }
+                    });
+                }
+
+                // 所有标签页都监听消息
                 window.addEventListener('storage', (e) => {
-                    if (e.key === 'wsMessage') {
+                    if (e.key === SOCKET_MESSAGE_KEY && e.newValue) {
                         const message = JSON.parse(e.newValue);
-                        console.log("从其他标签页收到消息：", message.data);
-                        addMessage(`从其他标签页收到消息--: ${message.data}`);
+                        console.log("收到消息：", message);
+                        addMessage(message.data);
                     }
                 });
 
-                // 标签页关闭时清理
+                // 标签页关闭时的清理
                 window.addEventListener('beforeunload', () => {
-                    if (localStorage.getItem('activeTab') === tabId) {
-                        localStorage.removeItem('activeTab');
+                    if (isMasterTab) {
+                        localStorage.removeItem(MASTER_TAB_KEY);
+                        if (socket) {
+                            socket.close();
+                        }
                     }
                 });
+
+                // 定期检查主标签页是否存在
+                const checkMasterTab = setInterval(() => {
+                    if (!localStorage.getItem(MASTER_TAB_KEY)) {
+                        clearInterval(checkMasterTab);
+                        this.initLocalStorage(); // 重新初始化，可能成为新的主标签页
+                    }
+                }, 1000);
 
                 this.sendMessage = (message) => {
-                    socket.emit("client_data", message);
+                    if (isMasterTab && socket) {
+                        socket.emit("client_data", message);
+                    } else {
+                        // 非主标签页通过localStorage发送消息请求
+                        localStorage.setItem(SOCKET_ACTION_KEY, JSON.stringify({
+                            type: "client_data",
+                            data: message
+                        }));
+                    }
+                };
+
+                this.sendPrivateMessage = (message) => {
+                    if (isMasterTab && socket) {
+                        socket.emit("private_message", message);
+                    } else {
+                        localStorage.setItem(SOCKET_ACTION_KEY, JSON.stringify({
+                            type: "private_message",
+                            data: message
+                        }));
+                    }
+                };
+
+                this.sendBroadcastMessage = (message) => {
+                    if (isMasterTab && socket) {
+                        socket.emit("broadcast_message", message);
+                    } else {
+                        localStorage.setItem(SOCKET_ACTION_KEY, JSON.stringify({
+                            type: "broadcast_message",
+                            data: message
+                        }));
+                    }
                 };
             }
         }
@@ -138,25 +245,79 @@
         // 初始化 WebSocket 管理器
         const wsManager = new WebSocketManager();
 
-        // 处理表单提交
+        // 处理按钮点击
         const form = document.getElementById('form');
         const input = document.getElementById('input');
+        const privateBtn = document.getElementById('privateBtn');
+        const broadcastBtn = document.getElementById('broadcastBtn');
 
         function addMessage(data) {
             const messages = document.getElementById('messages');
             const li = document.createElement('li');
             li.textContent = data;
+            // 添加自动滚动
+            li.style.marginBottom = '10px';
             messages.appendChild(li);
+            messages.scrollTop = messages.scrollHeight;
         }
 
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
+
+        // 移除原有的form提交事件
+        form.onsubmit = (e) => e.preventDefault();
+
+        // 私聊消息按钮点击事件
+        privateBtn.addEventListener('click', () => {
             if (input.value) {
-                wsManager.sendMessage(input.value);
+                wsManager.sendPrivateMessage(input.value);
+                input.value = '';
+            }
+        });
+
+        // 广播消息按钮点击事件
+        broadcastBtn.addEventListener('click', () => {
+            if (input.value) {
+                wsManager.sendBroadcastMessage(input.value);
                 input.value = '';
             }
         });
     </script>
+    <style>
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        #form {
+            display: flex;
+            gap: 10px;
+        }
+
+        #input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </body>
 
 </html>

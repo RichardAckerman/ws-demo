@@ -60,6 +60,14 @@ function setupNewSocket() {
     socket.on("server_data", handleServerData);
     socket.on("connect_error", handleConnectError);
     socket.on("disconnect", handleDisconnect);
+    socket.on("private_message", (data) => {
+        console.log('收到私聊消息:', data);
+        broadcast({ type: 'private_message', data: `[私聊] ${data}` });
+    });
+    socket.on("broadcast_message", (data) => {
+        console.log('收到广播消息:', data);
+        broadcast({ type: 'broadcast_message', data: `[广播] ${data}` });
+    });
 }
 
 // Socket 事件处理函数
@@ -151,7 +159,6 @@ self.onconnect = function (e) {
     ports.add(port);
     console.log('新连接已建立，当前连接数:', ports.size);
 
-    // 确保有效连接
     if (!socket || !socket.connected) {
         initSocket();
     }
@@ -159,8 +166,18 @@ self.onconnect = function (e) {
     // 设置消息处理
     port.onmessage = function (e) {
         const { type, data } = e.data;
-        if (type === 'send' && socket && socket.connected) {
-            socket.emit("client_data", data);
+        if (socket && socket.connected) {
+            switch (type) {
+                case 'private_message':
+                    socket.emit("private_message", data);
+                    break;
+                case 'broadcast_message':
+                    socket.emit("broadcast_message", data);
+                    break;
+                case 'send':
+                    socket.emit("client_data", data);
+                    break;
+            }
         }
     };
 

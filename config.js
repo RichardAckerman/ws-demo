@@ -33,6 +33,6 @@ export const config = {
         url: function() {
             return `http://${this.host}:${this.port}`;
         },
-        html: htmlPage.wsPure
+        html: htmlPage.wsSharedworker
     }
 };
